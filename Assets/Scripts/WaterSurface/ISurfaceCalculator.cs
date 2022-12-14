@@ -1,7 +1,10 @@
+using UnityEngine;
+
 namespace WaterSurface
 {
     public interface ISurfaceCalculator
     {
-        (float[,], float[,]) Step(float[,] grid, float[,] speedGrid, float deltaTime);
+        (float[] newGrid, float[] newSpeedGrid, Vector3[] newGridNormals) Step(float deltaTime,
+            int? gridW = null, int? gridH = null, float[] grid = null, float[] speedGrid = null);
     }
 }

@@ -1,5 +1,39 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-3321156057643796324
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d877a03bef431a847adca8ab343db3e1, type: 3}
+  m_Name: RayTracingSettings
+  m_EditorClassIdentifier: 
+  active: 1
+  m_AdvancedMode: 0
+  rayBias:
+    m_OverrideState: 0
+    m_Value: 0.001
+    min: 0
+    max: 0.1
+  extendShadowCulling:
+    m_OverrideState: 0
+    m_Value: 0
+  extendCameraCulling:
+    m_OverrideState: 0
+    m_Value: 0
+  directionalShadowRayLength:
+    m_OverrideState: 0
+    m_Value: 1000
+    min: 0.01
+  directionalShadowFallbackIntensity:
+    m_OverrideState: 0
+    m_Value: 1
+    min: 0
+    max: 1
 --- !u!114 &-1016694868962581565
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -88,6 +122,7 @@ MonoBehaviour:
   - {fileID: 1932259527246508038}
   - {fileID: 448115243408767295}
   - {fileID: 1515847872004723089}
+  - {fileID: -3321156057643796324}
 --- !u!114 &448115243408767295
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -112,18 +147,18 @@ MonoBehaviour:
     m_Value: 0
   exposure:
     m_OverrideState: 1
-    m_Value: 11
+    m_Value: 14.46
   multiplier:
     m_OverrideState: 0
     m_Value: 1
     min: 0
   upperHemisphereLuxValue:
     m_OverrideState: 0
-    m_Value: 0.4660715
+    m_Value: 1.0522135
     min: 0
   upperHemisphereLuxColor:
     m_OverrideState: 0
-    m_Value: {x: 0.18750614, y: 0.29181972, z: 0.5}
+    m_Value: {x: 0.32778853, y: 0.36476335, z: 0.5}
   desiredLuxValue:
     m_OverrideState: 0
     m_Value: 20000
@@ -139,7 +174,7 @@ MonoBehaviour:
     m_Value: 0
   hdriSky:
     m_OverrideState: 1
-    m_Value: {fileID: 8900000, guid: 8253d41e6e8b11a4cbe77a4f8f82934d, type: 3}
+    m_Value: {fileID: 8900000, guid: af6b6f662918312488b25f076029dd77, type: 3}
   enableDistortion:
     m_OverrideState: 0
     m_Value: 0
@@ -282,7 +317,7 @@ MonoBehaviour:
   m_AdvancedMode: 0
   quality:
     m_OverrideState: 1
-    m_Value: 2
+    m_Value: 3
   enabled:
     m_OverrideState: 0
     m_Value: 1
@@ -290,11 +325,11 @@ MonoBehaviour:
     m_OverrideState: 0
     m_Value: 0
   rayTracing:
-    m_OverrideState: 0
-    m_Value: 0
-  reflectSky:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 1
+  reflectSky:
+    m_OverrideState: 1
+    m_Value: 0
   depthBufferThickness:
     m_OverrideState: 0
     m_Value: 1
@@ -314,7 +349,7 @@ MonoBehaviour:
     m_OverrideState: 0
     m_Value:
       serializedVersion: 2
-      m_Bits: 4294967295
+      m_Bits: 55
   mode:
     m_OverrideState: 0
     m_Value: 2
@@ -342,8 +377,8 @@ MonoBehaviour:
     m_OverrideState: 1
     m_Value: 64
   m_RayLength:
-    m_OverrideState: 0
-    m_Value: 50
+    m_OverrideState: 1
+    m_Value: 500
     min: 0.01
   m_ClampValue:
     m_OverrideState: 0

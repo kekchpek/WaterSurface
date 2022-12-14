@@ -1,0 +1,124 @@
+#pragma kernel CalculateHeights
+#pragma kernel CalculateNormals
+#pragma kernel SetBuffer
+
+RWStructuredBuffer<float> HeightGridBuffer;
+RWStructuredBuffer<float> SpeedGridBuffer;
+RWStructuredBuffer<float3> NormalsGridBuffer;
+RWStructuredBuffer<float> DeltaTimeBuffer;
+RWStructuredBuffer<int> GridSizeBuffer;
+
+RWStructuredBuffer<float> NewHeightGrid;
+
+RWStructuredBuffer<float3> OutputNormalsGridBuffer;
+
+float GetDiagonalValue(float val, float diagonalVal)
+{
+    return val + (diagonalVal - val) / 1.41421356237f;
+}
+
+float CalculateNeighboursAverage(uint index)
+{
+    int j = index % GridSizeBuffer[0];
+    int i = index / GridSizeBuffer[0];
+    float neighbourAverage = 0.0f;
+    float neighboursCount = 0.0f;
+    if (i > 0)
+    {
+        neighbourAverage += HeightGridBuffer[index - GridSizeBuffer[0]];
+        neighboursCount++;
+        if (j > 0)
+        {
+            neighbourAverage += GetDiagonalValue(HeightGridBuffer[index], HeightGridBuffer[index - GridSizeBuffer[0] - 1]);
+            neighboursCount++;
+        }
+        if (j < GridSizeBuffer[0] - 1)
+        {
+            neighbourAverage += GetDiagonalValue(HeightGridBuffer[index], HeightGridBuffer[index - GridSizeBuffer[0] + 1]);
+            neighboursCount++;
+        }
+    }
+
+    if (i < GridSizeBuffer[1] - 1)
+    {
+        neighbourAverage += HeightGridBuffer[index + GridSizeBuffer[0]];
+        neighboursCount++;
+
+        if (j > 0)
+        {
+            neighbourAverage += GetDiagonalValue(HeightGridBuffer[index], HeightGridBuffer[index + GridSizeBuffer[0] - 1]);
+            neighboursCount++;
+        }
+
+        if (j < GridSizeBuffer[0] - 1)
+        {
+            neighbourAverage += GetDiagonalValue(HeightGridBuffer[index], HeightGridBuffer[index + GridSizeBuffer[0] + 1]);
+            neighboursCount++;
+        }
+    }
+
+    if (j > 0)
+    {
+        neighbourAverage += HeightGridBuffer[index - 1];
+        neighboursCount++;
+    }
+
+    if (j < GridSizeBuffer[0] - 1)
+    {
+        neighbourAverage += HeightGridBuffer[index + 1];
+        neighboursCount++;
+    }
+    neighbourAverage /= neighboursCount;
+    return neighbourAverage;
+}
+
+float3 FindNormalOfTriangle(float3 baseVertex, float3 vertex1, float3 vertex2)
+{
+    return normalize(cross(vertex1 - baseVertex, vertex2 - baseVertex));
+}
+
+float3 FindNormalOfVertex(float3 vertex, float3 neighbours[4])
+{
+    float3 normalsSum = float3(0.0f, 0.0f, 0.0f);
+    for (uint i = 0; i < 4; i++)
+    {
+        uint nextIndex = i < 3 ? i + 1 : 0;
+        normalsSum += FindNormalOfTriangle(vertex, neighbours[i], neighbours[nextIndex]);
+    }
+    return normalize(normalsSum / 4.0);
+}
+
+[numthreads(1024,1,1)]
+void CalculateHeights (uint3 id : SV_DispatchThreadID)
+{
+    if (int(id.x) >= GridSizeBuffer[0] * GridSizeBuffer[1])
+        return;
+    float neighbourAverage = CalculateNeighboursAverage(id.x);
+    SpeedGridBuffer[id.x] = (SpeedGridBuffer[id.x] + (neighbourAverage - HeightGridBuffer[id.x]) * 10.0f) * 0.999f;
+    NewHeightGrid[id.x] = HeightGridBuffer[id.x] + SpeedGridBuffer[id.x] * DeltaTimeBuffer[0];
+}
+
+[numthreads(1024,1,1)]
+void CalculateNormals(uint3 id: SV_DispatchThreadID)
+{
+    uint j = id.x % GridSizeBuffer[0];
+    uint i = id.x / GridSizeBuffer[0];
+    
+    float3 neighbours[] = {
+        float3(i, NewHeightGrid[id.x + 1], j + 1),
+        float3(i + 1, NewHeightGrid[id.x + GridSizeBuffer[0]], j),
+        float3(i, NewHeightGrid[id.x - 1], j - 1),
+        float3(i - 1, NewHeightGrid[id.x - GridSizeBuffer[0]], j)
+    };
+    
+    OutputNormalsGridBuffer[id.x] = FindNormalOfVertex(float3(i, NewHeightGrid[id.x], j), neighbours);
+}
+
+[numthreads(1024,1,1)]
+void SetBuffer (uint3 id : SV_DispatchThreadID)
+{
+    if (int(id.x) >= GridSizeBuffer[0] * GridSizeBuffer[1])
+        return;
+    HeightGridBuffer[id.x] = NewHeightGrid[id.x];
+    
+}
