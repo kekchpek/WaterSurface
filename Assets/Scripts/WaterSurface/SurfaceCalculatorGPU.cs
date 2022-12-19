@@ -1,18 +1,18 @@
 ﻿using System;
+using System.Linq;
 using UnityEngine;
 
 namespace WaterSurface
 {
     public class SurfaceCalculatorGPU : MonoBehaviour, ISurfaceCalculator
     {
-
-        private const int MaxGridBatchSize = 256;
         private const int StripCount = 4;
         
         [SerializeField]
         private ComputeShader _waterComputeShader;
 
         private bool _buffersInited;
+        private bool _factorBuffersInited;
         
         private ComputeBuffer _gridHeightBuffer;
         private ComputeBuffer _speedGridBuffer;
@@ -20,33 +20,59 @@ namespace WaterSurface
         private ComputeBuffer _deltaTimeBuffer;
         private ComputeBuffer _outputNormalsGridBuffer;
         private ComputeBuffer _newHeightGridBuffer;
+        private ComputeBuffer _absorbBuffer;
+        private ComputeBuffer _fluidityBuffer;
+        private ComputeBuffer _gridActiveMaskBuffer;
 
         private int _gridSize;
-        private int _gridH;
-        private int _gridW;
+        private int _gridH = -1;
+        private int _gridW = -1;
 
         private float[] _cachedGrid;
         private float[] _cachedSpeeds;
 
-        private void InitBuffers(int size)
+        public void Initialize(int gridSize)
         {
+            if (_buffersInited)
+                return;
+
+            int size = gridSize * 4;
+            
             _gridHeightBuffer = new ComputeBuffer(size, 4);
             _speedGridBuffer = new ComputeBuffer(size, 4);
             _gridSizeBuffer = new ComputeBuffer(2, 4);
             _deltaTimeBuffer = new ComputeBuffer(1, 4);
             _outputNormalsGridBuffer = new ComputeBuffer(size, 12);
             _newHeightGridBuffer = new ComputeBuffer(size, 4);
+            _gridActiveMaskBuffer = new ComputeBuffer(size, 4);
+            
+            _absorbBuffer = new ComputeBuffer(4, 4);
+            _fluidityBuffer = new ComputeBuffer(4, 4);
+            
             _waterComputeShader.SetBuffer(0, "HeightGridBuffer", _gridHeightBuffer);
             _waterComputeShader.SetBuffer(2, "HeightGridBuffer", _gridHeightBuffer);
+            
+            _waterComputeShader.SetBuffer(0, "GridActiveMaskBuffer", _gridActiveMaskBuffer);
+            _waterComputeShader.SetBuffer(1, "GridActiveMaskBuffer", _gridActiveMaskBuffer);
+            _waterComputeShader.SetBuffer(2, "GridActiveMaskBuffer", _gridActiveMaskBuffer);
+
             _waterComputeShader.SetBuffer(0, "SpeedGridBuffer", _speedGridBuffer);
+            
             _waterComputeShader.SetBuffer(0, "GridSizeBuffer", _gridSizeBuffer);
             _waterComputeShader.SetBuffer(1, "GridSizeBuffer", _gridSizeBuffer);
             _waterComputeShader.SetBuffer(2, "GridSizeBuffer", _gridSizeBuffer);
+            
             _waterComputeShader.SetBuffer(0, "DeltaTimeBuffer", _deltaTimeBuffer);
             _waterComputeShader.SetBuffer(1, "OutputNormalsGridBuffer", _outputNormalsGridBuffer);
+            
             _waterComputeShader.SetBuffer(0, "NewHeightGrid", _newHeightGridBuffer);
             _waterComputeShader.SetBuffer(1, "NewHeightGrid", _newHeightGridBuffer);
             _waterComputeShader.SetBuffer(2, "NewHeightGrid", _newHeightGridBuffer);
+        
+            _waterComputeShader.SetBuffer(0, "AbsorbBuffer", _absorbBuffer);
+        
+            _waterComputeShader.SetBuffer(0, "FluidityBuffer", _fluidityBuffer);
+            
             _buffersInited = true;
         }
 
@@ -54,26 +80,13 @@ namespace WaterSurface
             int? gridW = null, int? gridH = null, float[] grid = null, float[] speedGrid = null)
         {
 
-            if (!_buffersInited)
+            if (_gridH == -1 || _gridW == -1)
             {
                 if (grid == null || speedGrid == null || gridH == null || gridW == null)
                     throw new InvalidOperationException("First time calculation started all arguments should be specified.");
-                
-                
                 _gridH = gridH.Value;
                 _gridW = gridW.Value;
                 _gridSize = gridW!.Value * gridH!.Value;
-
-                if (gridW > MaxGridBatchSize || gridH > MaxGridBatchSize)
-                {
-                    InitBuffers(gridH.Value * gridW.Value / StripCount);
-                }
-                else
-                {
-                    InitBuffers(gridH.Value * gridW.Value);
-                }
-                
-                
             }
             else
             {
@@ -82,66 +95,23 @@ namespace WaterSurface
                     throw new InvalidOperationException("Grid size can not be changed!");
                 }
             }
-
-            if (_gridH > MaxGridBatchSize || gridH > MaxGridBatchSize)
-            {
-                return StripAndCalculate(deltaTime, grid, speedGrid);
-            }
-            else
-            {
-                return CalculateBatch(deltaTime, grid, speedGrid);
-            }
+            
+            return CalculateBatch(deltaTime, grid, speedGrid);
         }
 
-        private (float[] newGrid, float[] newSpeedGrid, Vector3[] newGridNormals) StripAndCalculate(float deltaTime, float[] grid = null, float[] speedGrid = null)
+        public void SetFluidityFactor(float fluidityFactor)
         {
-            if (grid != null)
-            {
-                _cachedGrid = grid;
-            }
+            _fluidityBuffer.SetData(new [] { fluidityFactor });
+        }
 
-            if (speedGrid != null)
-            {
-                _cachedSpeeds = speedGrid;
-            }
+        public void SetAbsorbFactor(float absorbFactor)
+        {
+            _absorbBuffer.SetData(new [] { absorbFactor });
+        }
 
-            var resultGrid = new float[_cachedGrid.Length];
-            var resultSpeed = new float[_cachedGrid.Length];
-            var resultNormals = new Vector3[_cachedGrid.Length];
-
-            var batchGridHeight = _gridH / StripCount;
-            var processingHeight = 0;
-            while (processingHeight < _gridH)
-            {
-                var countToCalculate = _gridW * batchGridHeight;
-                var startIndex = processingHeight * _gridW;
-                var calculatedData = CalculateBatch(deltaTime, _cachedGrid, _cachedSpeeds,
-                    startIndex,
-                    Math.Min(countToCalculate, _cachedGrid.Length - startIndex));
-
-                var copyHeight = processingHeight;
-                var startCopyIndex = 0;
-                if (processingHeight > 0)
-                {
-                    startCopyIndex = _gridW;
-                    copyHeight++;
-                }
-                Array.Copy(calculatedData.newGrid, startCopyIndex,
-                    resultGrid, copyHeight * _gridW,
-                    calculatedData.newGrid.Length - startCopyIndex);
-                Array.Copy(calculatedData.newSpeedGrid, startCopyIndex,
-                    resultSpeed, copyHeight * _gridW,
-                    calculatedData.newSpeedGrid.Length - startCopyIndex);
-                Array.Copy(calculatedData.newGridNormals, startCopyIndex,
-                    resultNormals, copyHeight * _gridW,
-                    calculatedData.newGridNormals.Length - startCopyIndex);
-                processingHeight += batchGridHeight - 2;
-            }
-
-            _cachedGrid = resultGrid;
-            _cachedSpeeds = resultSpeed;
-            
-            return (resultGrid, resultSpeed, resultNormals);
+        public void SetActiveGridMask(int[] mask)
+        {
+            _gridActiveMaskBuffer.SetData(mask);
         }
 
         private (float[] newGrid, float[] newSpeedGrid, Vector3[] newGridNormals) 

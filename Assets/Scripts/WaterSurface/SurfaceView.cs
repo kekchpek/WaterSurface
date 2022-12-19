@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -23,12 +24,20 @@ namespace WaterSurface
         [SerializeField] private float _timeScale;
         [SerializeField] private int _callsScale;
 
+        [SerializeField] private float _fluidityFactor = 30f;
+        [SerializeField] private float _absorbFactor = 0.997f;
+
         [SerializeField] private float _waveStrength;
 
         [SerializeField] private int _waveSize;
 
+        [SerializeField] private Collider[] _obstaclesColliders;
+
         private bool _firstCall = true;
         private bool _gridChanged;
+
+        private float? _lastFluidityFactor;
+        private float? _lastAbsorbFactor;
         
 
         private void Awake()
@@ -66,11 +75,21 @@ namespace WaterSurface
 
                     _grid[vertexIndex].x = step * i;
                     _grid[vertexIndex].z = step * j;
-                    _heightGrid[vertexIndex] = 15f;
+                    _grid[vertexIndex].y = 15f;
+                    _heightGrid[vertexIndex] = 15f; 
                 }
             }
             _mesh.vertices = _grid;
             _mesh.triangles = triangles;
+            
+            _surfaceCalculator.Initialize(_grid.Length);
+
+            var activeMask = new int[_grid.Length];
+            for (var i = 0; i < _grid.Length; i++)
+            {
+                activeMask[i] = Convert.ToInt32(_obstaclesColliders.All(x => !IsInside(x, _grid[i])));
+            }
+            _surfaceCalculator.SetActiveGridMask(activeMask);
         }
 
         private void CreateWave(int x, int y)
@@ -97,6 +116,18 @@ namespace WaterSurface
 
         private void FixedUpdate()
         {
+            if (_lastFluidityFactor != _fluidityFactor)
+            {
+                _surfaceCalculator.SetFluidityFactor(_fluidityFactor);
+                _lastFluidityFactor = _fluidityFactor;
+            }
+
+            if (_lastAbsorbFactor != _absorbFactor)
+            {
+                _surfaceCalculator.SetAbsorbFactor(_absorbFactor);
+                _lastAbsorbFactor = _absorbFactor;
+            }
+            
             var time = Time.fixedDeltaTime * _timeScale;
             for (var callN = 0; callN < _callsScale; callN++)
             {
@@ -130,6 +161,12 @@ namespace WaterSurface
                 _mesh.vertices = _grid;
                 _mesh.normals = newData.newGridNormals;
             }
+        }
+        
+        private bool IsInside(Collider c, Vector3 point)
+        {
+            var closest = c.ClosestPoint(point);
+            return closest == point;
         }
 
         public void OnRaycast(RaycastHit hitInfo)
