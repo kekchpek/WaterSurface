@@ -1,135 +1,178 @@
 using System;
-using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace WaterSurface
 {
     public class SurfaceView : MonoBehaviour, IRaycastable
     {
 
-        [SerializeField] private int N;
+        [SerializeField] private float _realSize;
+        [SerializeField] private int _gridSize;
 
         private Vector3[] _grid;
         
         private Mesh _mesh;
         private MeshFilter _meshFilter;
-        private MeshCollider _meshCollider;
         
-        private float[,] _heightGrid;
-        private float[,] _speedGrid;
-        private Vector3[] _normals;
+        private float[] _heightGrid;
+        private float[] _speedGrid;
 
-        private ISurfaceCalculator _surfaceCalculator = new SurfaceCalculator();
+        private ISurfaceCalculator _surfaceCalculator;
         
-        [SerializeField] private float waveHeight;
+        [SerializeField] private float _timeScale;
+        [SerializeField] private int _callsScale;
+
+        [SerializeField] private float _fluidityFactor = 30f;
+        [SerializeField] private float _absorbFactor = 0.997f;
+
+        [SerializeField] private float _waveStrength;
+
+        [SerializeField] private int _waveSize;
+
+        [SerializeField] private Collider[] _obstaclesColliders;
+
+        private bool _firstCall = true;
+        private bool _gridChanged;
+
+        private float? _lastFluidityFactor;
+        private float? _lastAbsorbFactor;
+        
 
         private void Awake()
         {
-            _grid = new Vector3[N * N];
-            _heightGrid = new float[N, N];
-            _speedGrid = new float[N, N];
-            _normals = new Vector3[N * N];
+            _surfaceCalculator = GetComponent<SurfaceCalculatorGPU>();
+            _grid = new Vector3[_gridSize * _gridSize];
+            _heightGrid = new float[_gridSize * _gridSize];
+            _speedGrid = new float[_gridSize * _gridSize];
             
             _meshFilter = gameObject.GetComponent<MeshFilter>();
-            _meshCollider = gameObject.GetComponent<MeshCollider>();
-            _mesh = new Mesh();
-            var triangles = new int[6 * (N - 1) * (N - 1)];
-            _meshFilter.sharedMesh = _mesh;
-            _meshCollider.sharedMesh = _mesh;
-            for (var i = 0; i < N; i++)
+            _mesh = new Mesh
             {
-                for (var j = 0; j < N; j++)
+                indexFormat = IndexFormat.UInt32
+            };
+            var triangles = new int[6 * (_gridSize - 1) * (_gridSize - 1)];
+            _meshFilter.sharedMesh = _mesh;
+
+            var step = _realSize / (_gridSize - 1);
+            for (var i = 0; i < _gridSize; i++)
+            {
+                for (var j = 0; j < _gridSize; j++)
                 {
-                    int vertexIndex = i * N + j;
-                    if (i < N - 1 && j < N - 1)
+                    var vertexIndex = i * _gridSize + j;
+                    if (i < _gridSize - 1 && j < _gridSize - 1)
                     {
-                        var triangleStartIndex = (i * (N - 1) + j) * 6;
+                        var triangleStartIndex = (i * (_gridSize - 1) + j) * 6;
                         triangles[triangleStartIndex] = vertexIndex;
                         triangles[triangleStartIndex + 1] = vertexIndex + 1;
-                        triangles[triangleStartIndex + 2] = vertexIndex + N;
+                        triangles[triangleStartIndex + 2] = vertexIndex + _gridSize;
                         // second triangle
-                        triangles[triangleStartIndex + 3] = vertexIndex + N + 1;
-                        triangles[triangleStartIndex + 4] = vertexIndex + N;
+                        triangles[triangleStartIndex + 3] = vertexIndex + _gridSize + 1;
+                        triangles[triangleStartIndex + 4] = vertexIndex + _gridSize;
                         triangles[triangleStartIndex + 5] = vertexIndex + 1;
                     }
 
-                    _grid[vertexIndex].x = i;
-                    _grid[vertexIndex].z = j;
-                    _heightGrid[i, j] = 5f;
+                    _grid[vertexIndex].x = step * i;
+                    _grid[vertexIndex].z = step * j;
+                    _grid[vertexIndex].y = 15f;
+                    _heightGrid[vertexIndex] = 15f; 
                 }
             }
             _mesh.vertices = _grid;
             _mesh.triangles = triangles;
+            
+            _surfaceCalculator.Initialize(_grid.Length);
+
+            var activeMask = new int[_grid.Length];
+            for (var i = 0; i < _grid.Length; i++)
+            {
+                activeMask[i] = Convert.ToInt32(_obstaclesColliders.All(x => !IsInside(x, _grid[i])));
+            }
+            _surfaceCalculator.SetActiveGridMask(activeMask);
         }
 
         private void CreateWave(int x, int y)
         {
-            for (var i = -10; i < 10; i++)
+            var halfWaveSize = _waveSize / 2;
+            for (var i = -halfWaveSize; i < halfWaveSize; i++)
             {
-                for (var j = -10; j < 10; j++)
+                for (var j = -halfWaveSize; j < halfWaveSize; j++)
                 {
-                    var indexX = x + i;
-                    var indexY = y + j;
-                    if (indexX < 0 || indexX >= N || indexY < 0 || indexY >= N)
+                    var indexY = x + i;
+                    var indexX = y + j;
+                    var index = indexY * _gridSize + indexX;
+                    if (indexX < 0 || indexX >= _gridSize || indexY < 0 || indexY >= _gridSize)
                     {
                         continue;
                     }
-                    _heightGrid[indexX, indexY] 
-                        += Mathf.Max(0f, waveHeight * Mathf.Cos(Mathf.Sqrt(i * i + j * j) * Mathf.PI / 20f));
+                    _heightGrid[index] 
+                        += _waveStrength * Mathf.Max(0f, Mathf.Cos(Mathf.Sqrt(i * i + j * j) * Mathf.PI / _waveSize));
                 }
             }
+
+            _gridChanged = true;
         }
 
         private void FixedUpdate()
         {
-            var newData = _surfaceCalculator.Step(_heightGrid, _speedGrid, Time.fixedDeltaTime);
-            _heightGrid = newData.Item1;
-            _speedGrid = newData.Item2;
-            for (var i = 0; i < N; i++)
+            if (_lastFluidityFactor != _fluidityFactor)
             {
-                for (var j = 0; j < N; j++)
-                {
-                    var index = i * N + j;
-                    _grid[index].y = _heightGrid[i, j];
-                }
+                _surfaceCalculator.SetFluidityFactor(_fluidityFactor);
+                _lastFluidityFactor = _fluidityFactor;
             }
-            for (var i = 1; i < N - 1; i++)
-            {
-                for (var j = 1; j < N -1; j++)
-                {
-                    var index = i * N + j;
-                    var neighbours = new List<Vector3>();
-                    neighbours.Add(_grid[index + 1]);
-                    neighbours.Add(_grid[index + N]);
-                    neighbours.Add(_grid[index - 1]);
-                    neighbours.Add(_grid[index - N]);
-                    _normals[index] = FindNormalOfVertex(_grid[index], neighbours.ToArray());
-                }
-            }
-            _mesh.vertices = _grid;
-            _mesh.normals = _normals;
-            _meshCollider.sharedMesh = _mesh;
-        }
 
-        private Vector3 FindNormalOfVertex(Vector3 vertex, params Vector3[] neighbours)
-        {
-            var normalsSum = Vector3.zero;
-            for (var i = 0; i < neighbours.Length; i++)
+            if (_lastAbsorbFactor != _absorbFactor)
             {
-                var nextIndex = i < neighbours.Length - 1 ? i + 1 : 0;
-                normalsSum += FindNormalOfTriangle(vertex, neighbours[i], neighbours[nextIndex]);
+                _surfaceCalculator.SetAbsorbFactor(_absorbFactor);
+                _lastAbsorbFactor = _absorbFactor;
             }
-            return (normalsSum / neighbours.Length).normalized;
-        }
+            
+            var time = Time.fixedDeltaTime * _timeScale;
+            for (var callN = 0; callN < _callsScale; callN++)
+            {
+                (float[] newGrid, float[] newSpeedGrid, Vector3[] newGridNormals) newData;
+                if (_firstCall)
+                {
+                    newData =
+                        _surfaceCalculator.Step(time, _gridSize, _gridSize, _heightGrid, _speedGrid);
+                    _firstCall = false;
+                } 
+                else if (_gridChanged)
+                {
+                    newData = _surfaceCalculator.Step(time, grid: _heightGrid);
+                    _gridChanged = false;
+                }
+                else
+                {
+                    newData = _surfaceCalculator.Step(time);
+                }
 
-        private Vector3 FindNormalOfTriangle(Vector3 baseVertex, Vector3 vertex1, Vector3 vertex2)
+                _heightGrid = newData.newGrid;
+                _speedGrid = newData.newSpeedGrid;
+                for (var i = 0; i < _gridSize; i++)
+                {
+                    for (var j = 0; j < _gridSize; j++)
+                    {
+                        var index = i * _gridSize + j;
+                        _grid[index].y = _heightGrid[index];
+                    }
+                }
+                _mesh.vertices = _grid;
+                _mesh.normals = newData.newGridNormals;
+            }
+        }
+        
+        private bool IsInside(Collider c, Vector3 point)
         {
-            return Vector3.Cross(vertex1 - baseVertex, vertex2 - baseVertex).normalized;
+            var closest = c.ClosestPoint(point);
+            return closest == point;
         }
 
         public void OnRaycast(RaycastHit hitInfo)
         {
-            CreateWave(Mathf.RoundToInt(hitInfo.point.x), Mathf.RoundToInt(hitInfo.point.z));
+            var factor = _gridSize / _realSize;
+            CreateWave(Mathf.RoundToInt(hitInfo.point.x * factor), Mathf.RoundToInt(hitInfo.point.z * factor));
         }
     }
 }

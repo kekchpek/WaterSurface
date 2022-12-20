@@ -2,28 +2,30 @@
 %TAG !u! tag:unity3d.com,2011:
 --- !u!21 &2100000
 Material:
-  serializedVersion: 6
+  serializedVersion: 8
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: Water
   m_Shader: {fileID: 4800000, guid: 6e4ae4064600d784cac1e41a9e6f2e59, type: 3}
-  m_ShaderKeywords: _ALPHAPREMULTIPLY_ON _DISABLE_DECALS _NORMALMAP_TANGENT_SPACE
-    _NORMALMAP_TANGENT_SPACE0 _NORMALMAP_TANGENT_SPACE1 _NORMALMAP_TANGENT_SPACE2
-    _NORMALMAP_TANGENT_SPACE3
+  m_ValidKeywords:
+  - _DISABLE_DECALS
+  - _MATERIAL_FEATURE_CLEAR_COAT
+  - _NORMALMAP_TANGENT_SPACE
+  - _SURFACE_TYPE_TRANSPARENT
+  m_InvalidKeywords: []
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
-  m_CustomRenderQueue: 2000
+  m_CustomRenderQueue: 3000
   stringTagMap:
     MotionVector: User
+    RenderType: Transparent
   disabledShaderPasses:
   - MOTIONVECTORS
-  - RayTracingPrepass
   - TransparentBackface
-  - TransparentDepthPrepass
-  - TransparentDepthPostpass
+  - RayTracingPrepass
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
@@ -319,6 +321,7 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    m_Ints: []
     m_Floats:
     - _AORemapMax: 1
     - _AORemapMax0: 1
@@ -330,25 +333,25 @@ Material:
     - _AORemapMin1: 0
     - _AORemapMin2: 0
     - _AORemapMin3: 0
-    - _ATDistance: 1
+    - _ATDistance: 9.17
     - _AddPrecomputedVelocity: 0
     - _AlbedoAffectEmissive: 0
-    - _AlphaCutoff: 0.5
+    - _AlphaCutoff: 0.293
     - _AlphaCutoffEnable: 0
-    - _AlphaCutoffPostpass: 0.5
-    - _AlphaCutoffPrepass: 0.5
+    - _AlphaCutoffPostpass: 0.935
+    - _AlphaCutoffPrepass: 0
     - _AlphaCutoffShadow: 0.5
-    - _AlphaDstBlend: 0
+    - _AlphaDstBlend: 10
     - _AlphaSrcBlend: 1
     - _AlphaToMask: 0
     - _AlphaToMaskInspectorValue: 0
     - _Anisotropy: 0
     - _BlendMode: 0
     - _BumpScale: 1
-    - _CoatMask: 0
+    - _CoatMask: 1
     - _CullMode: 2
     - _CullModeForward: 2
-    - _Cutoff: 0.5
+    - _Cutoff: 0.293
     - _DepthOffsetEnable: 0
     - _DetailAlbedoScale: 1
     - _DetailAlbedoScale0: 1
@@ -380,8 +383,9 @@ Material:
     - _DisplacementLockTilingScale: 1
     - _DisplacementMode: 0
     - _DoubleSidedEnable: 0
+    - _DoubleSidedGIMode: 0
     - _DoubleSidedNormalMode: 1
-    - _DstBlend: 0
+    - _DstBlend: 10
     - _EmissiveColorMode: 1
     - _EmissiveExposureWeight: 1
     - _EmissiveIntensity: 1
@@ -453,7 +457,7 @@ Material:
     - _InvTilingScale1: 1
     - _InvTilingScale2: 1
     - _InvTilingScale3: 1
-    - _Ior: 1.5
+    - _Ior: 1.333
     - _IridescenceMask: 1
     - _IridescenceThickness: 1
     - _LayerCount: 2
@@ -463,7 +467,7 @@ Material:
     - _LinkDetailsWithBase2: 1
     - _LinkDetailsWithBase3: 1
     - _MaterialID: 1
-    - _Metallic: 0.532
+    - _Metallic: 1
     - _Metallic0: 0
     - _Metallic1: 0
     - _Metallic2: 0
@@ -484,7 +488,7 @@ Material:
     - _NormalMapSpace1: 0
     - _NormalMapSpace2: 0
     - _NormalMapSpace3: 0
-    - _NormalScale: 1
+    - _NormalScale: 2.22
     - _NormalScale0: 1
     - _NormalScale1: 1
     - _NormalScale2: 1
@@ -545,7 +549,7 @@ Material:
     - _SubsurfaceMask2: 1
     - _SubsurfaceMask3: 1
     - _SupportDecals: 0
-    - _SurfaceType: 0
+    - _SurfaceType: 1
     - _TessellationBackFaceCullEpsilon: -0.25
     - _TessellationFactor: 4
     - _TessellationFactorMaxDistance: 50
@@ -560,7 +564,7 @@ Material:
     - _TexWorldScale3: 1
     - _TexWorldScaleBlendMask: 1
     - _TexWorldScaleEmissive: 1
-    - _Thickness: 1
+    - _Thickness: 0.459
     - _Thickness0: 1
     - _Thickness1: 1
     - _Thickness2: 1
@@ -592,19 +596,19 @@ Material:
     - _UseMainLayerInfluence: 0
     - _UseShadowThreshold: 0
     - _VertexColorMode: 0
-    - _ZTestDepthEqualForOpaque: 3
+    - _ZTestDepthEqualForOpaque: 4
     - _ZTestGBuffer: 4
     - _ZTestTransparent: 4
-    - _ZWrite: 1
+    - _ZWrite: 0
     m_Colors:
-    - _BaseColor: {r: 0.6264151, g: 0.88878155, b: 1, a: 0.29803923}
+    - _BaseColor: {r: 0, g: 0.7924528, b: 0.7924528, a: 0.9843137}
     - _BaseColor0: {r: 1, g: 1, b: 1, a: 1}
     - _BaseColor1: {r: 1, g: 1, b: 1, a: 1}
     - _BaseColor2: {r: 1, g: 1, b: 1, a: 1}
     - _BaseColor3: {r: 1, g: 1, b: 1, a: 1}
     - _BaseColorMap0_MipInfo: {r: 0, g: 0, b: 0, a: 0}
     - _BaseColorMap_MipInfo: {r: 0, g: 0, b: 0, a: 0}
-    - _Color: {r: 0.6264151, g: 0.88878155, b: 1, a: 0.29803923}
+    - _Color: {r: 0, g: 0.7924528, b: 0.7924528, a: 0.9843137}
     - _DiffusionProfileAsset: {r: 0, g: 0, b: 0, a: 0}
     - _DiffusionProfileAsset0: {r: 0, g: 0, b: 0, a: 0}
     - _DiffusionProfileAsset1: {r: 0, g: 0, b: 0, a: 0}
@@ -622,7 +626,7 @@ Material:
     - _ThicknessRemap1: {r: 0, g: 1, b: 0, a: 0}
     - _ThicknessRemap2: {r: 0, g: 1, b: 0, a: 0}
     - _ThicknessRemap3: {r: 0, g: 1, b: 0, a: 0}
-    - _TransmittanceColor: {r: 1, g: 1, b: 1, a: 1}
+    - _TransmittanceColor: {r: 1, g: 1, b: 1, a: 0.5019608}
     - _UVDetailsMappingMask: {r: 1, g: 0, b: 0, a: 0}
     - _UVDetailsMappingMask0: {r: 1, g: 0, b: 0, a: 0}
     - _UVDetailsMappingMask1: {r: 1, g: 0, b: 0, a: 0}
@@ -648,4 +652,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: da692e001514ec24dbc4cca1949ff7e8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  version: 11
+  version: 12
+  hdPluginSubTargetMaterialVersions:
+    m_Keys: []
+    m_Values: 
