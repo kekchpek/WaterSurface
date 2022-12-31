@@ -15,9 +15,9 @@ jobs:
       UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
       
     steps:
-        - name: Checkout repo
+      - name: Checkout repo
         uses: actions/checkout@v2
-        - uses: game-ci/unity-builder@v2
+      - uses: game-ci/unity-builder@v2
         with:
           targetPlatform: StandaloneWindows
           buildsPath: "build/"
