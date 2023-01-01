@@ -5,7 +5,7 @@ on:
 
 jobs:
   build:
-
+    name: Unity build
     runs-on: ubuntu-latest
     environment: CommonEnv
     
