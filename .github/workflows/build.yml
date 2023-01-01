@@ -1,11 +1,12 @@
 name: Unity build
 
 on:
-  workflow_dispatch: {}
+  push:
+    branches: [ develop ]
 
 jobs:
   build:
-    name: Unity build
+
     runs-on: ubuntu-latest
     environment: CommonEnv
     
