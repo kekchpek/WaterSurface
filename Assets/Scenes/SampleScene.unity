@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 705507994}
-  m_IndirectSpecularColor: {r: 6758.5234, g: 7812.0977, b: 10601.703, a: 1}
+  m_IndirectSpecularColor: {r: 0, g: 0, b: 0, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -874,7 +874,7 @@ MonoBehaviour:
   _timeScale: 1
   _callsScale: 1
   _fluidityFactor: 50
-  _absorbFactor: 0
+  _absorbFactor: 0.999
   _waveStrength: 1
   _waveSize: 10
   _obstaclesColliders:
