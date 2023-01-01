@@ -23,6 +23,13 @@ jobs:
           targetPlatform: StandaloneWindows
           buildsPath: "build/"
           versioning: Semantic
+      - name: Zip build
+        run: zip -r WaterSurfaceBuild.zip build
+      - name: Expose as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: Build
+          path: WaterSurfaceBuild.zip
         
     
     
