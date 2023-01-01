@@ -1,9 +1,7 @@
 name: Unity build
 
 on:
-  - workflow_dispatch: {}
-  - push:
-      branches: [ develop ]
+  workflow_dispatch: {}
 
 jobs:
   build:
